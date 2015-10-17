@@ -137,9 +137,9 @@ func TestLRUWithBackend(t *testing.T) {
 	dir := NewStore(StoreTestPath)
 	defer os.RemoveAll(StoreTestPath)
 	store := NewLRU(2, dir)
-	<-store.Set("foo", &ByteItem{[]byte("Begin")})
-	<-store.Set("foo", &ByteItem{[]byte("Hello")})
-	<-store.Set("bar", &ByteItem{[]byte("World")})
+	store.Set("foo", &ByteItem{[]byte("Begin")})
+	store.Set("foo", &ByteItem{[]byte("Hello")})
+	store.Set("bar", &ByteItem{[]byte("World")})
 
 	// This kicks "foo" out of cache to the backend store, updated "foo" value
 	// should be written to disk
@@ -166,7 +166,6 @@ func TestLRUWithBackend(t *testing.T) {
 
 	// when "foo" was read "baz" has been dropped out, so backend store should
 	// have 2 items: "foo" and "baz"
-	<-dir.Flush()
 	item = dir.Get("foo", &ByteItem{}).(*ByteItem)
 	if string(item.Value) != "Hello" {
 		t.Error(item.Value)

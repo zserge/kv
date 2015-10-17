@@ -188,7 +188,7 @@ func (store *lru) Get(key string, item Item) Item {
 		return el.Value.(*lruItem).V
 	} else if store.backend != nil {
 		if item := store.backend.Get(key, item); item != nil {
-			store.put(key, item)
+			<-store.put(key, item)
 			return item
 		}
 	}
