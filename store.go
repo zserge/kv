@@ -179,6 +179,12 @@ func NewLRU(size int, backend Store) Store {
 	}
 }
 
+var noErrChan = func() <-chan error {
+	c := make(chan error)
+	close(c)
+	return c
+}()
+
 func (store *lru) Get(key string, item Item) Item {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
@@ -188,14 +194,14 @@ func (store *lru) Get(key string, item Item) Item {
 		return el.Value.(*lruItem).V
 	} else if store.backend != nil {
 		if item := store.backend.Get(key, item); item != nil {
-			<-store.put(key, item)
+			<-store.put(key, item, noErrChan)
 			return item
 		}
 	}
 	return nil
 }
 
-func (store *lru) put(key string, item Item) (c <-chan error) {
+func (store *lru) put(key string, item Item, c <-chan error) <-chan error {
 	if len(store.m) < store.size {
 		store.m[key] = store.l.PushFront(&lruItem{key, item})
 	} else {
@@ -216,16 +222,13 @@ func (store *lru) Set(key string, item Item) <-chan error {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
 
-	c := make(chan error)
-	close(c)
+	c := noErrChan
 
 	if el, ok := store.m[key]; ok {
 		el.Value = &lruItem{key, item}
 		store.l.MoveToFront(el)
 	} else if item != nil {
-		if c := store.put(key, item); c != nil {
-			return c
-		}
+		c = store.put(key, item, noErrChan)
 	}
 	return c
 }
